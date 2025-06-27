@@ -1,0 +1,30 @@
+git clone https://github.com/farsilvar/data-mining-big-data-files.git
+
+docker pull apache/hive:4.0.0
+
+docker run -d -p 10000:10000 -p 10002:10002 --env SERVICE_NAME=hiveserver2 -v /root/data-mining-big-data-file:/hive_custom_data --name hive4 apache/hive:4.0.0
+
+cd /root/data-mining-big-data-files
+
+sed -E 's/^(\S+) - - \[([^]]+)\] "(\S+) (\S+) (\S+)" ([0-9]+)/\1,\2,\3,\4,\5,\6/' fake_web_logs.txt > fake_web_logs_coma.txt
+
+cp /root/data-mining-big-data-files/fake_web_logs_coma.txt /root/data-mining-big-data-file/
+
+docker exec -it hive4 beeline -u 'jdbc:hive2://localhost:10000/'
+
+DROP TABLE IF EXISTS web_logs;
+CREATE TABLE web_logs (
+  ip STRING,
+  data_hora STRING,
+  metodo STRING,
+  recurso STRING,
+  protocolo STRING,
+  status INT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE;
+
+LOAD DATA LOCAL INPATH '/hive_custom_data/fake_web_logs_coma.txt' INTO TABLE web_logs;
+
+SELECT ip, data_hora FROM web_logs WHERE status >= 400;
